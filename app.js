@@ -330,44 +330,42 @@ function renderImmersiveCard(){
         <aside class="margin-note note-right" aria-hidden="true">BOX ${vol}</aside>
       </article>
 
-      <article class="card-details paper broadsheet" id="cardDetails">
-        <header class="broadsheet-masthead">
-          <div class="broadsheet-title">LEXICAL BULLETIN · SECTION ${vol}</div>
-          <div class="broadsheet-meta">Filed ${todayStamp}</div>
-        </header>
-        <div class="broadsheet-body" id="detailsBody">
-          ${renderBackWidgetsAsArticles(item)}
-        </div>
-        <footer class="broadsheet-footer">
-          <span>Compiled for dispatch ${dispatchNo}</span>
-          <span>${serialNo}</span>
-        </footer>
-        <div class="marginalia marginalia-left" aria-hidden="true">CLASSIFIED</div>
-      <div class="marginalia marginalia-right" aria-hidden="true">ARCHIVE</div>
-    </article>
+      <div class="card-details" id="cardDetails" aria-hidden="true">
+        <div class="sheet__roll" aria-hidden="true"></div>
+        <article class="paper broadsheet">
+          <header class="broadsheet-masthead">
+            <div class="broadsheet-title">LEXICAL BULLETIN · SECTION ${vol}</div>
+            <div class="broadsheet-meta">Filed ${todayStamp}</div>
+          </header>
+          <div class="broadsheet-body" id="detailsBody">
+            ${renderBackWidgetsAsArticles(item)}
+          </div>
+          <footer class="broadsheet-footer">
+            <span>Compiled for dispatch ${dispatchNo}</span>
+            <span>${serialNo}</span>
+          </footer>
+          <div class="marginalia marginalia-left" aria-hidden="true">CLASSIFIED</div>
+          <div class="marginalia marginalia-right" aria-hidden="true">ARCHIVE</div>
+        </article>
+      </div>
   </div>
   `;
 
-  const cardEl = $("imCard");
-  if (cardEl){
-    const details = $("cardDetails");
-    if (details){
-      if (session.detailsOpen){
-        details.classList.add("is-open");
-        details.style.height = details.scrollHeight + "px";
-        requestAnimationFrame(()=>{ details.style.height = "auto"; });
-      }else{
-        details.classList.remove("is-open");
-        details.style.height = "0px";
-      }
-    }
-    cardEl.onclick = (e)=>{
-      // 避免和按钮冲突
+  const detailCtx = getDetailsContext();
+  if (detailCtx){
+    setDetailsInstantState(detailCtx.details, session.detailsOpen);
+  }
+  syncDetailAccessibility(detailCtx, session.detailsOpen);
+
+  if (detailCtx && detailCtx.card){
+    detailCtx.card.onclick = (e)=>{
+      // avoid button collisions
       if (e.target.closest(".card-details")) return toggleDetails();
       if (e.target.closest(".im-controls")) return;
       toggleDetails();
     };
   }
+
 }
 
 function renderBackWidgetsAsArticles(rec){
@@ -436,55 +434,93 @@ function renderBackWidgetsAsArticles(rec){
   return sections.join("");
 }
 
-function toggleDetails(force){
-  const next = typeof force === "boolean" ? force : !session.detailsOpen;
+function getDetailsContext(){
   const card = $("imCard");
-  if (!card) return;
-  const details = card.querySelector(".card-details");
+  const details = $("cardDetails");
+  if (!details) return null;
+  return { card, details };
+}
+
+function setDetailsInstantState(details, isOpen){
   if (!details) return;
-
-  if (next === session.detailsOpen){
-    return;
-  }
-
-  if (next){
-    details.style.transition = "none";
-    details.style.height = "auto";
-    const target = details.scrollHeight;
-    details.style.height = "0px";
-    // 强制回流，确保起点为 0
-    details.offsetHeight;
-    details.style.transition = "";
+  if (isOpen){
     details.classList.add("is-open");
-    details.style.height = target + "px";
-    session.detailsOpen = true;
-
-    const onEnd = (e)=>{
-      if(e.propertyName !== "height") return;
-      details.removeEventListener("transitionend", onEnd);
-      if (session.detailsOpen){
-        details.style.height = "auto";
-      }
-    };
-    details.addEventListener("transitionend", onEnd);
+    details.style.height = "auto";
   }else{
-    const current = details.scrollHeight;
-    details.style.height = current + "px";
-    details.offsetHeight;
-    details.style.height = "0px";
-    session.detailsOpen = false;
     details.classList.remove("is-open");
-
-    const onEnd = (e)=>{
-      if(e.propertyName !== "height") return;
-      details.removeEventListener("transitionend", onEnd);
-      if (!session.detailsOpen){
-        details.style.height = "0px";
-      }
-    };
-    details.addEventListener("transitionend", onEnd);
+    details.style.height = "0px";
   }
 }
+
+function syncDetailAccessibility(ctx, isOpen){
+  const expanded = isOpen ? "true" : "false";
+  if (ctx && ctx.card){
+    ctx.card.setAttribute("aria-controls", "cardDetails");
+    ctx.card.setAttribute("aria-expanded", expanded);
+  }
+  if (ctx && ctx.details){
+    ctx.details.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  }
+  const flipBtn = $("imFlip");
+  if (flipBtn){
+    flipBtn.setAttribute("aria-controls", "cardDetails");
+    flipBtn.setAttribute("aria-expanded", expanded);
+  }
+}
+
+function openDetails(ctx){
+  if (!ctx || !ctx.details) return;
+  const { details } = ctx;
+  details.classList.add("is-measuring");
+  details.style.height = "auto";
+  const target = details.scrollHeight;
+  details.style.height = "0px";
+  details.offsetHeight;
+  details.classList.remove("is-measuring");
+  details.classList.add("is-open");
+  details.style.height = target + "px";
+  syncDetailAccessibility(ctx, true);
+  session.detailsOpen = true;
+
+  const onEnd = (e)=>{
+    if (e.target !== details || e.propertyName !== "height") return;
+    details.style.height = "auto";
+    details.removeEventListener("transitionend", onEnd);
+  };
+  details.addEventListener("transitionend", onEnd);
+}
+
+function closeDetails(ctx){
+  if (!ctx || !ctx.details) return;
+  const { details } = ctx;
+  const current = details.scrollHeight;
+  details.style.height = current + "px";
+  details.offsetHeight;
+  details.style.height = "0px";
+  details.classList.remove("is-open");
+  syncDetailAccessibility(ctx, false);
+  session.detailsOpen = false;
+
+  const onEnd = (e)=>{
+    if (e.target !== details || e.propertyName !== "height") return;
+    details.removeEventListener("transitionend", onEnd);
+  };
+  details.addEventListener("transitionend", onEnd);
+}
+
+
+function toggleDetails(force){
+  const ctx = getDetailsContext();
+  if (!ctx) return;
+  const next = typeof force === "boolean" ? force : !session.detailsOpen;
+  if (next === session.detailsOpen) return;
+  if (next){
+    openDetails(ctx);
+  }else{
+    closeDetails(ctx);
+  }
+}
+
 
 /** ========= 原有进度/排期逻辑 ========= */
 function updateImProgress(){
@@ -591,6 +627,14 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.key==="Escape"){ e.preventDefault(); $("imExit").click(); }
     }
   });
+  window.addEventListener("resize", ()=>{
+    if (!session.detailsOpen) return;
+    const ctx = getDetailsContext();
+    if (ctx && ctx.details){
+      ctx.details.style.height = "auto";
+    }
+  });
+
 
   // 初始渲染
   refreshStats();

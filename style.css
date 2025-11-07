@@ -171,7 +171,6 @@ body{
   box-shadow:0 6px 14px rgba(0,0,0,0.08);
   transition: transform .18s ease, box-shadow .18s ease;
 }
-.btn:hover{ transform:translateY(-1px); box-shadow:0 10px 20px rgba(0,0,0,0.12); }
 .btn:active{ transform:translateY(0); box-shadow:0 6px 14px rgba(0,0,0,0.08); }
 .btn.primary{ background:var(--accent); color:#fff6f3; }
 .btn.good{ background:var(--good); color:#f5fff9; }
@@ -207,7 +206,6 @@ body{
   box-shadow:0 8px 18px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.7);
   transition: transform .2s ease, box-shadow .2s ease;
 }
-.item:hover{ border-color:rgba(181,160,125,0.7); transform:translateY(-2px); box-shadow:0 14px 24px rgba(0,0,0,0.12); }
 .item .w{ font-weight:700; }
 .item .n{ color:rgba(78,62,46,0.72); font-size:13px; margin-top:4px; font-style:italic; }
 .item .meta{ margin-left:auto; font-size:12px; color:rgba(92,72,52,0.7); text-transform:uppercase; letter-spacing:.24em; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
@@ -244,41 +242,53 @@ body{
   transition: transform .45s cubic-bezier(.22,.61,.36,1), box-shadow .35s ease;
   cursor:pointer;
 }
-.card:hover{
-  transform: translateY(-2px);
-}
 .card-front{
   position:relative;
   z-index:2;
 }
-.card-front:hover{
-  box-shadow:0 26px 48px rgba(8,6,4,0.32);
-}
 .card-details{
+  position:relative;
   overflow:hidden;
   height:0;
-  transform: translateY(-14px);
-  transition: height .42s cubic-bezier(.2,.78,.22,1), transform .32s cubic-bezier(.2,.78,.22,1);
+  transition: height 600ms cubic-bezier(.2,.85,.25,1), filter 600ms ease;
   will-change: height;
   z-index:1;
-  padding:0 !important;
-  border:0 !important;
-  box-shadow:none !important;
-  background: var(--panel);
-  visibility:hidden;
+  padding:0;
+  border:0;
+  box-shadow:none;
+  background: transparent;
   pointer-events:none;
+  filter: saturate(.95) contrast(.98) brightness(.995);
+}
+.card-details.is-measuring{
+  transition:none;
 }
 .card-details.is-open{
-  transform: translateY(0);
-  padding:26px 30px 30px !important;
-  border:1px solid rgba(181,160,111,0.9) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.35),
-    0 18px 36px rgba(6,4,2,0.35) !important;
-  background: var(--paper);
-  visibility:visible;
   pointer-events:auto;
   height:auto;
+  filter: saturate(1) contrast(1) brightness(1);
+}
+.card-details .sheet__roll{
+  position:absolute;
+  top:0;
+  left:50%;
+  transform:translate(-50%,-100%) scaleY(.9);
+  width: calc(100% - 12px);
+  height:16px;
+  pointer-events:none;
+  background:
+    linear-gradient(#cdbfa9, #efe3ce 60%, #fff0),
+    radial-gradient(40% 100% at 50% 120%, rgba(0,0,0,.35), transparent 60%);
+  border:1px solid rgba(0,0,0,.25);
+  border-bottom:none;
+  border-radius:10px 10px 0 0;
+  box-shadow:0 6px 8px rgba(0,0,0,.15);
+  opacity:0;
+  transition: opacity 500ms ease 80ms, transform 600ms ease;
+}
+.card-details.is-open .sheet__roll{
+  opacity:1;
+  transform:translate(-50%,-100%) scaleY(1);
 }
 
 /* 复古纸张主体 */
@@ -653,10 +663,6 @@ body{
   left:-46px;
 }
 
-/* —— 上浮为标题（收缩样式）—— */
-.card-details{
-  background: var(--panel);
-}
 .card-details .broadsheet-body{
   padding-top:12px;
   flex:1 1 auto;
